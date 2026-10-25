@@ -1,28 +1,41 @@
 import numpy as np
-from scipy.signal import butter, lfilter
+from scipy.signal import butter, lfilter, iirnotch
 
-def butter_bandpass(lowcut, highcut, fs, order=5):
-    nyq = 0.5 * fs
-    low = lowcut / nyq
-    high = highcut / nyq
-    b, a = butter(order, [low, high], btype='band')
-    return b, a
+class SubSurfaceDSPPipeline:
+    def __init__(self, fs: float = 16000.0, lowcut: float = 20.0, highcut: float = 4000.0):
+        self.fs = fs
+        self.nyq = 0.5 * fs
+        # 6th-order Butterworth bandpass filter
+        self.b, self.a = butter(6, [lowcut / self.nyq, highcut / self.nyq], btype='band')
+        # Notch filter to eliminate 50Hz mains hum and DC motor switching harmonic interference
+        self.b_notch, self.a_notch = iirnotch(50.0, 30.0, fs)
 
-def bandpass_filter(data, lowcut, highcut, fs, order=5):
-    b, a = butter_bandpass(lowcut, highcut, fs, order=order)
-    y = lfilter(b, a, data)
-    return y
+    def process_stream(self, raw_buffer: np.ndarray) -> dict:
+        # Stage 1: Digital filtering for noise attenuation
+        filtered = lfilter(self.b, self.a, raw_buffer)
+        filtered = lfilter(self.b_notch, self.a_notch, filtered)
+        
+        # Stage 2: Hanning windowed Fast Fourier Transform (FFT) frequency analysis
+        windowed = filtered * np.hanning(len(filtered))
+        fft_mag = np.abs(np.fft.rfft(windowed))
+        freqs = np.fft.rfftfreq(len(filtered), 1 / self.fs)
+        
+        peak_idx = np.argmax(fft_mag)
+        resonance_frequency = float(freqs[peak_idx])
+        resonance_amplitude = float(fft_mag[peak_idx])
+        
+        # Stage 3: Sub-surface void and structural anomaly classification
+        anomaly_flag = bool(resonance_amplitude > 150.0 and 100.0 <= resonance_frequency <= 800.0)
+        
+        return {
+            "resonance_frequency_hz": resonance_frequency,
+            "spectral_amplitude": resonance_amplitude,
+            "anomaly_detected": anomaly_flag
+        }
 
 if __name__ == "__main__":
-    # Sampling parameters for 4-channel MEMS geophone array
-    fs = 10000.0
-    lowcut = 10.0
-    highcut = 1000.0
-    
-    # Simulate raw input signal buffer from I2S ADC
-    raw_signal = np.random.normal(0, 1, 1024)
-    filtered_signal = bandpass_filter(raw_signal, lowcut, highcut, fs, order=4)
-    
-    # Compute Fast Fourier Transform for frequency analysis
-    fft_result = np.fft.fft(filtered_signal)
-    print("DSP Pipeline Executed Successfully. Peak Frequency Bin:", np.argmax(np.abs(fft_result)))
+    pipeline = SubSurfaceDSPPipeline()
+    # Simulate realistic 16kHz geophone sensor buffer with embedded structural resonance
+    simulated_audio = np.random.normal(0, 1, 2048) + 45.0 * np.sin(2 * np.pi * 310 * np.arange(2048) / 16000)
+    result = pipeline.process_stream(simulated_audio)
+    print("Production DSP Execution Result:", result)
