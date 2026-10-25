@@ -1,0 +1,17 @@
+(kicad_sch (version 20211123) (generator eeschema)
+  (uuid 4a5b6c7d-8e9f-0a1b-2c3d-4e5f6a7b8c9d)
+  (paper "A4")
+  (title_block
+    (title "Resonance Rover Edge Compute & TDR Board")
+    (date "2026-10-25")
+    (rev "2.0")
+    (company "Aura Nodes")
+  )
+  (lib_symbols
+    (symbol "MCU_ST_STM32:STM32F405RGTx" (pin_names (offset 1.016)) (in_bom yes) (on_board yes))
+    (symbol "Driver_Motor:L298N" (pin_names (offset 1.016)) (in_bom yes) (on_board yes))
+  )
+  (wire (pts (xy 50.8 76.2) (xy 76.2 76.2)) (stroke (width 0) (type default) (color 0 0 0 0)))
+  (wire (pts (xy 76.2 76.2) (xy 76.2 88.9)) (stroke (width 0) (type default) (color 0 0 0 0)))
+  (text "I2S Geophone Array Interface" (at 50.8 70.0 0) (effects (font (size 1.27 1.27))))
+)
